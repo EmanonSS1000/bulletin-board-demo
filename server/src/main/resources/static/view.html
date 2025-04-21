@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>公告詳情</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+</head>
+<body class="container mt-5">
+  <h2 id="title">載入中...</h2>
+  <p><strong>發布者：</strong><span id="author"></span></p>
+  <p><strong>發布時間：</strong><span id="publishDate"></span></p>
+  <p><strong>截止日期：</strong><span id="deadline"></span></p>
+  <hr>
+  <div id="content"></div>
+  <div id="fileDownload" class="mt-3" style="display:none;">
+    <a id="downloadLink" class="btn btn-primary" href="#" download>下載附件</a>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("id");
+
+    if (!id) {
+      alert("無效的公告 ID");
+      history.back();
+    }
+
+    $.ajax({
+      url: `http://127.0.0.1:8081/boards/${id}`,
+      method: 'GET',
+      success: function(res) {
+        if (res.code === 1) {
+          console.log('伺服器回傳內容：', res);
+          const board = res.data;
+          $('#title').text(board.title);
+          $('#author').text(board.author);
+          $('#publishDate').text(board.publishDate);
+          $('#deadline').text(board.deadline);
+          $('#content').html(board.content.replace(/\n/g, '<br>')); // 換行處理
+        
+          if (board.fileUrl) {
+            console.log('board.fileUrl：', board.fileUrl);
+            $('#fileDownload').show();
+            $('#downloadLink').attr('href', `http://127.0.0.1:8081/boards/download/${board.fileUrl}`);
+          }
+        } else {
+          alert("載入失敗：" + res.msg);
+        }
+      },
+      error: function() {
+        alert("伺服器錯誤");
+      }
+    });
+  </script>
+</body>
+</html>

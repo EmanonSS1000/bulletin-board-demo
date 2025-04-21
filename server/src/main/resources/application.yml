@@ -1,0 +1,33 @@
+server:
+  port: 8081
+file:
+  upload-dir: D:\board\folder
+spring:
+  profiles:
+    active: dev
+  main:
+    allow-circular-references: true
+  datasource:
+    driver-class-name: ${board.datasource.driver-class-name}
+    url: jdbc:mysql://${board.datasource.host}:${board.datasource.port}/${board.datasource.database}?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${board.datasource.username}
+    password: ${board.datasource.password}
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 10
+      idle-timeout: 30000
+      pool-name: HikariPool-1
+      max-lifetime: 600000
+      connection-timeout: 30000
+      auto-commit: true
+      transaction-isolation: TRANSACTION_READ_COMMITTED
+  jpa:
+    hibernate:
+      ddl-auto: update        # ✅ Hibernate 自動建表策略（開發用 update，正式建議 none）
+    show-sql: true            # ✅ 印出執行的 SQL，方便 debug
+    properties:
+      hibernate:
+        format_sql: true      # ✅ 格式化 SQL 讓 log 可讀性更好
+
+
+    open-in-view: false     # ⚠️ 建議 REST API 專案關掉，以避免懶加載錯誤與性能問題

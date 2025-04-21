@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>發布公告</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+
+  <!-- 引入 CKEditor -->
+  <script src="https://cdn.ckeditor.com/ckeditor5/36.0.1/classic/ckeditor.js"></script>
+</head>
+<body class="container mt-5">
+  <h2>發布公告</h2>
+  <form id="postForm">
+    <div class="mb-3">
+      <label for="title" class="form-label">標題</label>
+      <input type="text" class="form-control" id="title">
+    </div>
+    <div class="mb-3">
+        <label for="author" class="form-label">公布者</label>
+        <input type="text" class="form-control" id="author" disabled>
+    </div>
+    <div class="mb-3">
+        <label for="deadline" class="form-label">截止日期</label>
+        <input type="date" class="form-control" id="deadline">
+    </div>
+    <div class="mb-3">
+      <label for="content" class="form-label">內容</label>
+      <textarea class="form-control" id="content" rows="15"></textarea>
+    </div>
+    <div class="mb-3">
+        <label for="attachment" class="form-label">上傳附件</label>
+        <input type="file" class="form-control" id="attachment">
+      </div>
+    <button type="submit" class="btn btn-primary">送出</button>
+  </form>
+
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script>
+
+    window.addEventListener('DOMContentLoaded', () => {
+        fetch('http://127.0.0.1:8081/api/me', {
+            credentials: 'include' // 很關鍵！讓瀏覽器帶上 session cookie
+        })
+        .then(res => res.json())
+        .then(result => {
+            console.log('result：', result);
+            if (result.code !== 1) {
+                console.log('尚未登入：', result);
+                alert('尚未登入');
+                window.location.href = 'login.html';
+            } else {
+            // 自動把使用者名稱填進公布者欄位，並設為唯讀
+                $('#author').val(result.data).prop('readonly', true);
+            }
+        })
+        .catch(error => {
+            console.log('獲取使用者失敗:', error);
+            alert('伺服器錯誤，請稍後再試');
+        });
+
+        const today = new Date().toISOString().split('T')[0]; // yyyy-mm-dd
+        $('#deadline').attr('min', today);
+
+    });
+
+    // 初始化 CKEditor
+    let editor;
+    ClassicEditor
+      .create(document.querySelector('#content'))
+      .then(ed => {
+        editor = ed; // 確保 editor 被成功初始化
+      })
+      .catch(error => {
+        console.error(error);
+      });
+
+      $('#postForm').on('submit', function (e) {
+        e.preventDefault();
+        if (!editor) {
+          console.error('CKEditor 尚未初始化');
+          return;
+        }
+
+        const title = $('#title').val();
+        const author = $('#author').val();
+        const deadline = $('#deadline').val();
+        const content = editor.getData();  // CKEditor 取內容
+        const publishDate = new Date().toISOString().split('T')[0]; // yyyy-mm-dd
+        const fileInput = $('#attachment')[0];
+        const file = fileInput.files[0];
+
+        // 若有檔案，要先上傳，取得路徑再送公告資料
+        if (file) {
+          const fileForm = new FormData();
+          fileForm.append('file', file);
+
+          fetch('http://127.0.0.1:8081/boards/upload', {
+            method: 'POST',
+            body: fileForm,
+            credentials: 'include'
+          })
+          .then(res => res.json())
+          .then(result => {
+            if (result.code === 1) {
+              const filePath = result.data;
+              sendPost(title, author, deadline, content, publishDate, filePath);
+            } else {
+              alert('檔案上傳失敗');
+            }
+          })
+          .catch(err => {
+            console.error('檔案上傳錯誤：', err);
+          });
+
+        } else {
+          // 沒檔案直接送
+          sendPost(title, author, deadline, content, publishDate, null);
+        }
+      });
+
+    // 抽出發送公告的方法
+    function sendPost(title, author, deadline, content, publishDate, filePath) {
+      const postData = {
+        title,
+        author,
+        deadline,
+        content,
+        publishDate,
+        filePath // 加在公告資料裡一起儲存
+      };
+
+      fetch('http://127.0.0.1:8081/boards/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(postData)
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.code === 1) {
+          window.location.href = 'board.html';
+        } else {
+          console.log('發布公告失敗：', data);
+          alert('發布公告失敗');
+        }
+      })
+      .catch(error => {
+        console.error('發佈公告錯誤:', error);
+      });
+    }
+
+  </script>
+</body>
+</html>
